@@ -92,7 +92,6 @@ def delete_posts(id:int):
 
 
 
-
 # @app.get("/")
 # def test():
 #     return{"messgae":"this test is working"}
