@@ -1,17 +1,24 @@
 from fastapi import FastAPI, HTTPException, status,Depends
 from fastapi.params import Body
-from pydantic import BaseModel
 from typing import Optional
 from random import randrange
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import time 
 from sqlalchemy.orm import Session 
-from . import models
+from pydantic import BaseModel
+from . import models,schemas,utilis
 from .database import engine, get_db
+from .routers import posts,user,auth
+
+
 
 models.Base.metadata.create_all(bind=engine)
 app = FastAPI()
+app.include_router(posts.router)
+app.include_router(user.router)
+app.include_router(auth.router)
+
 
 
 # while True:
@@ -25,82 +32,9 @@ app = FastAPI()
 #     except Exception as error:
 #         print("databse connection failed")
 #         print("error",error)
-#         time.sleep(20)
-
-
-
-class Post(BaseModel):
-    title:str
-    content:str
-    published:bool = True
-
-
-#GET ALL THE POST IN THE SYSTEM
+#         time.sleep(20)#GET ALL THE POST IN THE SYSTEM
 #alchemy
-@app.get("/posts")
-def test_post(db:Session = Depends(get_db)):
-    posts=db.query(models.Post).all() #query is sending the sql data query-.all() is giving the the result for retirnving the result
-    return{"data":posts}
-#psycopg2 
-# @app.get("/posts")
-# def get_posts():
-#     cursor.execute("SELECT * FROM posts")
-#     post=cursor.fetchall()
-#     return {"data":post}
-
-#CREATE A POST
-#Alchemy
-@app.post("/posts",status_code=status.HTTP_201_CREATED)
-def create_post(post:Post, db:Session=Depends(get_db)):
-    
-    #new_post=models.Post(title=post.title, content=post.content,published=post.published)
-    new_post=models.Post(**post.dict())
-    db.add(new_post)
-    db.commit()
-    db.refresh(new_post)#retrieve the new data and add it int the newpost
-    return{"data":new_post}
-
-# @app.post("/posts",status_code = status.HTTP_201_CREATED)
-# def add_post(post:Post):
-#     cursor.execute("INSERT INTO posts(title,content,published) VALUES (%s,%s,%s) RETURNING *",
-#                    (post.title,post.content,post.published))
-#     post_made=cursor.fetchone()
-#     #sql injection migth be possible if instead of %s we use directly there
-#     conn.commit()
-
-    
-#     return {"Poste Updated":post_made}
-#GET POST FROM ID  
-@app.get("/posts/{id}",status_code=status.HTTP_200_OK)
-def get_posts(id:int,db:Session=Depends(get_db)):
-    post = db.query(models.Post).filter(models.Post.id==id).first()
-
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"the post with {id} is not present")
-
-    return{"post details":post}
-
-@app.delete("/posts/{id}",status_code=status.HTTP_204_NO_CONTENT)
-def delete_posts(id:int,db:Session=Depends(get_db)):
-    post=db.query(models.Post).filter(models.Post.id==id)
-    if post.first()== None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"no such data{id}")
-    
-    post.delete(synchronize_session=False)
-    db.commit()
-
-
-@app.put("/posts/{id}")
-def update_posts(id:int,update_post:Post,db:Session=Depends(get_db)):
-    
-    post_query = db.query(models.Post).filter(models.Post.id==id)
-    post =post_query.first()
-    if post==None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail = "this is the updated method")
-    post_query.update(update_post.dict(),synchronize_session=False)
-    db.commit()
-
-    return {"data": update_post}
+#---------------------------------------UserTable Creation------------------------------
 
 # @app.get("/posts/{id}")
 # def get_post_id(id:int):
